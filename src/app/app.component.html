@@ -1,0 +1,72 @@
+<mat-toolbar color="primary" class="text-center mb-2"
+  >Audio Steganography</mat-toolbar
+>
+
+<div class="d-flex justify-content-center">
+  <div>
+    <div class="file-container" appDnd (fileDropped)="onFileDropped($event)">
+      <input
+        type="file"
+        #fileDropRef
+        id="fileDropRef"
+        (change)="fileBrowseHandler($event.target.files)"
+      />
+      <img src="assets/img/dnd/ic-upload-file.svg" alt="" />
+      <h3>Drag and drop file (.wav)</h3>
+      <h3>or</h3>
+      <button mat-flat-button color="primary">Browse Files</button>
+    </div>
+    <div class="files-list">
+      <div class="single-file" *ngFor="let file of files; let i = index">
+        <img src="assets/img/dnd/ic-file.svg" width="45px" alt="file" />
+        <div class="info">
+          <h4 class="name">
+            {{ file?.name }}
+          </h4>
+          <p class="size">
+            {{ formatBytes(file?.size) }}
+          </p>
+        </div>
+        <img
+          src="assets/img/dnd/ic-delete-file.svg"
+          class="delete mb-3"
+          width="20px"
+          alt="file"
+          (click)="deleteFile(i)"
+        />
+      </div>
+    </div>
+
+    <mat-button-toggle-group
+      class="my-2 w-100"
+      name="fontStyle"
+      aria-label="Font Style"
+      #operation
+      (change)="onOperationChange($event)"
+    >
+      <mat-button-toggle class="w-50" value="encode" checked >Encode</mat-button-toggle>
+      <mat-button-toggle class="w-50" value="decode">Decode</mat-button-toggle>
+    </mat-button-toggle-group>
+    <mat-button-toggle-group
+      class="my-2 w-100"
+      name="fontStyle"
+      aria-label="Font Style"
+      #steganographyMethod
+      (change)="onSteganographyMethodChange($event)"
+    >
+      <mat-button-toggle class="w-50" value="lsb" checked
+        >Least Significant Bit</mat-button-toggle
+      >
+      <mat-button-toggle class="w-50" value="parity"
+        >Parity Encoding</mat-button-toggle
+      >
+    </mat-button-toggle-group>
+    <mat-form-field *ngIf="showMessageBox" class="w-100 my-2" appearance="standard">
+      <mat-label>Message to be Encoded</mat-label>
+      <textarea matInput [(ngModel)]="message" [readonly]="isReadOnly"></textarea>
+    </mat-form-field>
+    <div class="my-2 d-flex justify-content-center">
+      <button mat-flat-button color="primary" [disabled]="showMessageBox && message.length === 0" (click)="onSubmit()">Process</button>
+    </div>
+  </div>
+</div>

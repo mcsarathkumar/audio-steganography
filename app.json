@@ -1,0 +1,28 @@
+{
+    "name": "audio-steganography",
+    "scripts": {},
+    "env": {
+      "NPM_CONFIG_PRODUCTION": {
+        "required": true,
+        "value": "false"
+      },
+      "FLASK_APP": {
+        "required": true,
+        "value": "wgsi.py"
+      },
+      "FLASK_DEBUG": {
+        "required": true,
+        "value": "0"
+      }
+    },
+    "formation": {},
+    "addons": [],
+    "buildpacks": [
+      {
+        "url": "heroku/nodejs"
+      },
+      {
+        "url": "heroku/python"
+      }
+    ]
+  }
