@@ -8,7 +8,7 @@
       },
       "FLASK_APP": {
         "required": true,
-        "value": "wgsi.py"
+        "value": "app.py"
       },
       "FLASK_DEBUG": {
         "required": true,
