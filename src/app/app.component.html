@@ -1,8 +1,13 @@
-<mat-toolbar color="primary" class="text-center mb-2"
+<mat-toolbar color="primary" class="text-center"
   >Audio Steganography</mat-toolbar
 >
-
-<div class="d-flex justify-content-center">
+<mat-progress-bar *ngIf="showProgress"
+          color="accent"
+          [mode]="progressMode"
+          [value]="progressValue"
+          bufferValue="100">
+      </mat-progress-bar>
+<div class="d-flex mt-2 justify-content-center">
   <div>
     <div class="file-container" appDnd (fileDropped)="onFileDropped($event)">
       <input

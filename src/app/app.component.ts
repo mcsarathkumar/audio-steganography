@@ -1,4 +1,4 @@
-import { HttpClient, HttpRequest, HttpResponse } from "@angular/common/http";
+import { HttpClient, HttpEventType, HttpRequest, HttpResponse } from "@angular/common/http";
 import { Component, ViewChild, ElementRef } from "@angular/core";
 import { MatButtonToggleChange } from "@angular/material/button-toggle";
 import { environment } from "src/environments/environment";
@@ -19,6 +19,9 @@ export class AppComponent {
   showMessageBox = true;
   isReadOnly = false;
   message = "";
+  showProgress = false;
+  progressMode = 'determinate';
+  progressValue = 0;
 
   constructor(private http: HttpClient, private snackBar: MatSnackBar) { }
 
@@ -101,23 +104,36 @@ export class AppComponent {
       formData.append("message", this.message);
       options['responseType'] = 'blob';
     }
-    this.http.post(environment.apiUrl + 'process', formData, options).subscribe(
+    options['reportProgress'] = true;
+    const req = new HttpRequest('POST',environment.apiUrl + 'process', formData, options);
+    this.showProgress = true;
+    this.progressMode = 'determinate';
+    this.http.request(req).subscribe(
       {
-        next: (response) => {
-          if (this.operation == 'encode') {
-            const fileNameLower = fileName.toLowerCase();
-            const fileNamePos = fileNameLower.lastIndexOf('.wav');
-            saveAs(response as Blob, this.files[0].name.slice(0, fileNamePos) + '_encoded' + fileName.slice(fileNamePos));
-          } else {
-            console.log(response);
-            this.isReadOnly = true;
-            this.showMessageBox = true;
-            this.messagePlaceholderValue = "Decoded message";
-            this.message = response['message'];
+        next: (event: any) => {
+          if (event.type === HttpEventType.UploadProgress) {
+            this.progressValue = Math.round(100 * event.loaded / event.total);
+            if (this.progressValue == 100) {
+              this.progressMode = 'indeterminate';
+            } 
+          } else if (event instanceof HttpResponse) {
+            const response = event;
+            if (this.operation == 'encode') {
+              const fileNameLower = fileName.toLowerCase();
+              const fileNamePos = fileNameLower.lastIndexOf('.wav');
+              saveAs(response.body as Blob, this.files[0].name.slice(0, fileNamePos) + '_encoded' + fileName.slice(fileNamePos));
+            } else {
+              this.isReadOnly = true;
+              this.showMessageBox = true;
+              this.messagePlaceholderValue = "Decoded message";
+              this.message = response.body['message'];
+            }
+            this.showProgress = false;
           }
         },
         error: (err) => {
           this.openSnackBar(err.error.message);
+          this.showProgress = false;
         }
       });
   }
