@@ -62,11 +62,11 @@
       >
     </mat-button-toggle-group>
     <mat-form-field *ngIf="showMessageBox" class="w-100 my-2" appearance="standard">
-      <mat-label>Message to be Encoded</mat-label>
+      <mat-label>{{messagePlaceholderValue}}</mat-label>
       <textarea matInput [(ngModel)]="message" [readonly]="isReadOnly"></textarea>
     </mat-form-field>
     <div class="my-2 d-flex justify-content-center">
-      <button mat-flat-button color="primary" [disabled]="showMessageBox && message.length === 0" (click)="onSubmit()">Process</button>
+      <button mat-flat-button color="primary" [disabled]="files.length === 0 || (showMessageBox && message.length === 0)" (click)="onSubmit()">Process</button>
     </div>
   </div>
 </div>

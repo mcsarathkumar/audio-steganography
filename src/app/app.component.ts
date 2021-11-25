@@ -1,6 +1,9 @@
-import { HttpClient } from "@angular/common/http";
+import { HttpClient, HttpRequest, HttpResponse } from "@angular/common/http";
 import { Component, ViewChild, ElementRef } from "@angular/core";
 import { MatButtonToggleChange } from "@angular/material/button-toggle";
+import { environment } from "src/environments/environment";
+import { saveAs } from 'file-saver';
+import { MatSnackBar } from "@angular/material/snack-bar";
 
 @Component({
   selector: "app-root",
@@ -17,7 +20,7 @@ export class AppComponent {
   isReadOnly = false;
   message = "";
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private snackBar: MatSnackBar) { }
 
   /**
    * on file drop handler
@@ -88,7 +91,48 @@ export class AppComponent {
   }
 
   onSubmit() {
-    console.log('test')
+    const formData = new FormData();
+    const fileName = this.files[0].name;
+    formData.append("file", this.files[0], fileName);
+    formData.append("operation", this.operation);
+    formData.append("method", this.steganographyMethod);
+    const options = {};
+    if (this.operation == 'encode') {
+      formData.append("message", this.message);
+      options['responseType'] = 'blob';
+    }
+    this.http.post(environment.apiUrl + 'process', formData, options).subscribe(
+      {
+        next: (response) => {
+          if (this.operation == 'encode') {
+            const fileNameLower = fileName.toLowerCase();
+            const fileNamePos = fileNameLower.lastIndexOf('.wav');
+            saveAs(response as Blob, this.files[0].name.slice(0, fileNamePos) + '_encoded' + fileName.slice(fileNamePos));
+          } else {
+            console.log(response);
+            this.isReadOnly = true;
+            this.showMessageBox = true;
+            this.messagePlaceholderValue = "Decoded message";
+            this.message = response['message'];
+          }
+        },
+        error: (err) => {
+          this.openSnackBar(err.error.message);
+        }
+      });
   }
 
+  resetForm() {
+    this.files = [];
+    this.operation = "encode";
+    this.steganographyMethod = "lsb";
+    this.messagePlaceholderValue = "Message to be encoded";
+    this.showMessageBox = true;
+    this.isReadOnly = false;
+    this.message = "";
+  }
+  
+  openSnackBar(message: string) {
+    this.snackBar.open(message, 'Ok');
+  }
 }
