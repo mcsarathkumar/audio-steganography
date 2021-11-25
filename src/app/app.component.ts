@@ -121,7 +121,7 @@ export class AppComponent {
             if (this.operation == 'encode') {
               const fileNameLower = fileName.toLowerCase();
               const fileNamePos = fileNameLower.lastIndexOf('.wav');
-              saveAs(response.body as Blob, this.files[0].name.slice(0, fileNamePos) + '_encoded' + fileName.slice(fileNamePos));
+              saveAs(response.body as Blob, this.files[0].name.slice(0, fileNamePos) + '_' + this.steganographyMethod + '_encoded' + fileName.slice(fileNamePos));
             } else {
               this.isReadOnly = true;
               this.showMessageBox = true;
@@ -133,7 +133,14 @@ export class AppComponent {
         },
         error: (err) => {
           if (err instanceof HttpErrorResponse) {
-            this.openSnackBar(err.error.message);
+            if (this.operation == "encode") {
+              err.error.text().then(error => {
+                const errorObj = JSON.parse(error);
+                this.openSnackBar(errorObj.message);
+              });
+            } else {
+              this.openSnackBar(err.error.message);
+            }
             this.showProgress = false;
           }
         }

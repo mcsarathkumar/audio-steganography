@@ -1,5 +1,4 @@
 import os
-import urllib.request
 import wave
 from flask import Flask, request, redirect, jsonify, send_file
 import mimetypes
@@ -7,6 +6,8 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 import json
+import numpy as np
+from scipy.io import wavfile
 
 mimetypes.add_type('application/javascript', '.js')
 ALLOWED_EXTENSIONS = set(['wav'])
@@ -152,6 +153,88 @@ def process():
                 resp.status_code = 400
                 return resp
             resp = jsonify({'message' : msg[0]})
+            resp.status_code = 200
+            return resp
+
+    elif  method == 'phase':
+        if operation == 'encode':
+            rate, audioData1 = wavfile.read(os.path.join(UPLOAD_FOLDER, filename))
+            stringToEncode = message.ljust(100, '~')
+            textLength = 8 * len(stringToEncode)
+            chunkSize = int(2 * 2 ** np.ceil(np.log2(2 * textLength)))
+            numberOfChunks = int(np.ceil(audioData1.shape[0] / chunkSize))
+            audioData = audioData1.copy()
+
+            #Breaking the Audio into chunks
+            if len(audioData1.shape) == 1:
+                audioData.resize(numberOfChunks * chunkSize, refcheck=False)
+                audioData = audioData[np.newaxis]
+            else:
+                audioData.resize((numberOfChunks * chunkSize, audioData.shape[1]), refcheck=False)
+                audioData = audioData.T
+
+            chunks = audioData[0].reshape((numberOfChunks, chunkSize))
+
+            #Applying DFT on audio chunks
+            chunks = np.fft.fft(chunks)
+            magnitudes = np.abs(chunks)
+            phases = np.angle(chunks)
+            phaseDiff = np.diff(phases, axis=0)
+
+            # Convert message to encode into binary
+            textInBinary = np.ravel([[int(y) for y in format(ord(x), "08b")] for x in stringToEncode])
+
+            # Convert message in binary to phase differences
+            textInPi = textInBinary.copy()
+            textInPi[textInPi == 0] = -1
+            textInPi = textInPi * -np.pi / 2
+
+            midChunk = chunkSize // 2
+
+            # Phase conversion
+            phases[0, midChunk - textLength: midChunk] = textInPi
+            phases[0, midChunk + 1: midChunk + 1 + textLength] = -textInPi[::-1]
+
+            # Compute the phase matrix
+            for i in range(1, len(phases)):
+                phases[i] = phases[i - 1] + phaseDiff[i - 1]
+                
+            # Apply Inverse fourier trnasform after applying phase differences
+            chunks = (magnitudes * np.exp(1j * phases))
+            chunks = np.fft.ifft(chunks).real
+
+            # Combining all block of audio again
+            audioData[0] = chunks.ravel().astype(np.int16)    
+            output = filename[:-4] + '_phase_encoded' + filename[-4:]
+            wavfile.write(os.path.join(UPLOAD_FOLDER, output), rate, audioData.T)
+            os.remove(os.path.join(UPLOAD_FOLDER, filename))
+            print(os.path.join(UPLOAD_FOLDER, output))
+            resp = app.response_class(generate(os.path.join(UPLOAD_FOLDER, output)), mimetype='audio/wav')
+            resp.headers.set('Content-Disposition', 'attachment', filename=output)
+            return resp
+
+        else:
+            rate, audioData = wavfile.read(os.path.join(UPLOAD_FOLDER, filename))
+
+            textLength = 800
+            blockLength = 2 * int(2 ** np.ceil(np.log2(2 * textLength)))
+            blockMid = blockLength // 2
+
+            # Get header info
+            if len(audioData.shape) == 1:
+                code = audioData[:blockLength]
+            else:
+                code = audioData[:blockLength, 0]
+            # Get the phase and convert it to binary
+            codePhases = np.angle(np.fft.fft(code))[blockMid - textLength:blockMid]
+            codeInBinary = (codePhases < 0).astype(np.int16)
+
+            # Convert into characters
+            codeInIntCode = codeInBinary.reshape((-1, 8)).dot(1 << np.arange(8 - 1, -1, -1))
+            
+            # Combine characters to original text
+            decodedText = "".join(np.char.mod("%c", codeInIntCode)).replace("~", "")
+            resp = jsonify({'message' : decodedText})
             resp.status_code = 200
             return resp
 
