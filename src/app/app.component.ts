@@ -1,4 +1,4 @@
-import { HttpClient, HttpEventType, HttpRequest, HttpResponse } from "@angular/common/http";
+import { HttpClient, HttpErrorResponse, HttpEventType, HttpRequest, HttpResponse } from "@angular/common/http";
 import { Component, ViewChild, ElementRef } from "@angular/core";
 import { MatButtonToggleChange } from "@angular/material/button-toggle";
 import { environment } from "src/environments/environment";
@@ -105,7 +105,7 @@ export class AppComponent {
       options['responseType'] = 'blob';
     }
     options['reportProgress'] = true;
-    const req = new HttpRequest('POST',environment.apiUrl + 'process', formData, options);
+    const req = new HttpRequest('POST', environment.apiUrl + 'process', formData, options);
     this.showProgress = true;
     this.progressMode = 'determinate';
     this.http.request(req).subscribe(
@@ -115,7 +115,7 @@ export class AppComponent {
             this.progressValue = Math.round(100 * event.loaded / event.total);
             if (this.progressValue == 100) {
               this.progressMode = 'indeterminate';
-            } 
+            }
           } else if (event instanceof HttpResponse) {
             const response = event;
             if (this.operation == 'encode') {
@@ -132,8 +132,10 @@ export class AppComponent {
           }
         },
         error: (err) => {
-          this.openSnackBar(err.error.message);
-          this.showProgress = false;
+          if (err instanceof HttpErrorResponse) {
+            this.openSnackBar(err.error.message);
+            this.showProgress = false;
+          }
         }
       });
   }
@@ -147,8 +149,10 @@ export class AppComponent {
     this.isReadOnly = false;
     this.message = "";
   }
-  
+
   openSnackBar(message: string) {
-    this.snackBar.open(message, 'Ok');
+    this.snackBar.open(message, 'Ok', {
+      duration: 3000
+    });
   }
 }

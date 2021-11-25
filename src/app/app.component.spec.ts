@@ -20,16 +20,16 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have as title 'ng-wav-steganography'`, () => {
+  it(`should have as title 'audio-steganography'`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('ng-wav-steganography');
+    expect(app.title).toEqual('audio-steganography');
   });
 
   it('should render title', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.content span')?.textContent).toContain('ng-wav-steganography app is running!');
+    expect(compiled.querySelector('.content span')?.textContent).toContain('audio-steganography app is running!');
   });
 });

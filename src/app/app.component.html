@@ -1,12 +1,14 @@
-<mat-toolbar color="primary" class="text-center"
-  >Audio Steganography</mat-toolbar
->
-<mat-progress-bar *ngIf="showProgress"
-          color="accent"
-          [mode]="progressMode"
-          [value]="progressValue"
-          bufferValue="100">
-      </mat-progress-bar>
+<div class="sticky-top">
+  <mat-toolbar color="primary" class="text-center"
+    >Audio Steganography</mat-toolbar
+  >
+  <mat-progress-bar *ngIf="showProgress"
+            color="accent"
+            [mode]="progressMode"
+            [value]="progressValue"
+            bufferValue="100">
+  </mat-progress-bar>
+</div>
 <div class="d-flex mt-2 justify-content-center">
   <div>
     <div class="file-container" appDnd (fileDropped)="onFileDropped($event)">
@@ -74,4 +76,8 @@
       <button mat-flat-button color="primary" [disabled]="files.length === 0 || (showMessageBox && message.length === 0)" (click)="onSubmit()">Process</button>
     </div>
   </div>
+</div>
+
+<div class="text-center mt-4">
+Made with ❤️ for OpenSource Community. Source code available in <a href="https://github.com/mcsarathkumar/audio-steganography" target="_blank">GitHub</a>
 </div>

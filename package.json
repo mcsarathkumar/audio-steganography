@@ -1,5 +1,5 @@
 {
-  "name": "ng-wav-steganography",
+  "name": "audio-steganography",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
