@@ -32,6 +32,9 @@ def generate(path):
         yield from f
     os.remove(path)
 
+def delete_file(filename):
+    os.remove(os.path.join(UPLOAD_FOLDER, filename))
+
 app = Flask(__name__, static_url_path='', static_folder='dist')
 CORS(app, expose_headers=["Content-Disposition"])
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000
@@ -86,16 +89,11 @@ def process():
     filename = secure_filename(file.filename)
     file.save(os.path.join(UPLOAD_FOLDER, filename))
     if not is_valid_signature(os.path.join(UPLOAD_FOLDER, filename)):
-        os.remove(os.path.join(UPLOAD_FOLDER, filename))
+        delete_file(filename)
         resp = jsonify({'message' : 'Invalid File contents'})
         resp.status_code = 400
         return resp
-    # @after_this_request
-    # def remove_file(output):
-    #     try:
-    #         os.remove(os.path.join(UPLOAD_FOLDER, output))
-    #     except Exception as error:
-    #         print("Error removing or closing downloaded file handle")
+
     if method == 'lsb':
         if operation == 'encode':
 
@@ -126,7 +124,7 @@ def process():
                 fd.writeframes(frame_modified)
                 fd.close()
             waveaudio.close()
-            os.remove(os.path.join(UPLOAD_FOLDER, filename))
+            delete_file(filename)
             resp = app.response_class(generate(os.path.join(UPLOAD_FOLDER, output)), mimetype='audio/wav')
             resp.headers.set('Content-Disposition', 'attachment', filename=output)
             return resp
@@ -145,7 +143,7 @@ def process():
             # Convert byte array back to string
             string = "".join(chr(int("".join(map(str, extracted[i:i + 8])), 2)) for i in range(0, len(extracted), 8))
             waveaudio.close()
-            os.remove(os.path.join(UPLOAD_FOLDER, filename))
+            delete_file(filename)
             # Cut off at the filler characters
             msg = string.split("###")
             if (len(msg) == 1):
@@ -158,13 +156,18 @@ def process():
 
     elif  method == 'phase':
         if operation == 'encode':
+            # Read the Input file using wavfile provided by scipy package
             rate, audio_data1 = wavfile.read(os.path.join(UPLOAD_FOLDER, filename))
+            # Left justify 100 characters using fillers (~)
             string_to_encode = message.ljust(100, '~')
+            # Find text length in bits
             text_length = 8 * len(string_to_encode)
+            # Find the chunk size using the given text length using numpy package
             chunk_size = int(2 * 2 ** np.ceil(np.log2(2 * text_length)))
+            # From the obtained chunk file calculate the number of chunks that has to be created
             number_of_chunks = int(np.ceil(audio_data1.shape[0] / chunk_size))
+            # Make a copy of the audio Data
             audio_data = audio_data1.copy()
-
             #Breaking the Audio into chunks
             if len(audio_data1.shape) == 1:
                 audio_data.resize(number_of_chunks * chunk_size, refcheck=False)
@@ -172,10 +175,10 @@ def process():
             else:
                 audio_data.resize((number_of_chunks * chunk_size, audio_data.shape[1]), refcheck=False)
                 audio_data = audio_data.T
-
+            # Take out the chunks
             chunks = audio_data[0].reshape((number_of_chunks, chunk_size))
 
-            #Applying DFT on audio chunks
+            # Applying DFT on audio chunks (Fourier Transform), Calculate absolute value element wise, Retruens the angle of chunks, Calculate discrete difference of the given axis
             chunks = np.fft.fft(chunks)
             magnitudes = np.abs(chunks)
             phases = np.angle(chunks)
@@ -207,16 +210,17 @@ def process():
             audio_data[0] = chunks.ravel().astype(np.int16)    
             output = filename[:-4] + '_phase_encoded' + filename[-4:]
             wavfile.write(os.path.join(UPLOAD_FOLDER, output), rate, audio_data.T)
-            os.remove(os.path.join(UPLOAD_FOLDER, filename))
-            print(os.path.join(UPLOAD_FOLDER, output))
+            delete_file(filename)
             resp = app.response_class(generate(os.path.join(UPLOAD_FOLDER, output)), mimetype='audio/wav')
             resp.headers.set('Content-Disposition', 'attachment', filename=output)
             return resp
 
         else:
+            # Read the Input file using wavfile provided by scipy package
             rate, audio_data = wavfile.read(os.path.join(UPLOAD_FOLDER, filename))
-
+            # Based on the encoded lenght, we consider the length of text block to be 800
             text_length = 800
+            # Calculate Block length and mid of block
             block_length = 2 * int(2 ** np.ceil(np.log2(2 * text_length)))
             block_mid = block_length // 2
 
@@ -225,19 +229,18 @@ def process():
                 code = audio_data[:block_length]
             else:
                 code = audio_data[:block_length, 0]
+            
             # Get the phase and convert it to binary
             code_phases = np.angle(np.fft.fft(code))[block_mid - text_length:block_mid]
             code_in_binary = (code_phases < 0).astype(np.int16)
-
             # Convert into characters
             code_in_int_code = code_in_binary.reshape((-1, 8)).dot(1 << np.arange(8 - 1, -1, -1))
-            
             # Combine characters to original text
             decoded_text = "".join(np.char.mod("%c", code_in_int_code)).replace("~", "")
+            delete_file(filename)
             resp = jsonify({'message' : decoded_text})
             resp.status_code = 200
             return resp
-
 
 @app.route('/<path:path>')
 def static_proxy(path):
