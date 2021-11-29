@@ -141,11 +141,16 @@ def process():
             # Extract the LSB of each byte
             extracted = [frame_bytes[i] & 1 for i in range(len(frame_bytes))]
             # Convert byte array back to string
-            string = "".join(chr(int("".join(map(str, extracted[i:i + 8])), 2)) for i in range(0, len(extracted), 8))
+            secret_list = []
+            for i in range(0, len(extracted), 8):
+                extracted_byte = map(str, extracted[i:i + 8])
+                extarcted_char = chr(int(''.join(extracted_byte),2))
+                secret_list.append(extarcted_char)
+            secret_message = "".join(secret_list)
             waveaudio.close()
             delete_file(filename)
             # Cut off at the filler characters
-            msg = string.split("###")
+            msg = secret_message.split("###")
             if (len(msg) == 1):
                 resp = jsonify({'message' : 'The File Does not contain any Encoded Content'})
                 resp.status_code = 400
